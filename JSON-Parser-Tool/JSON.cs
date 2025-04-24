@@ -1,4 +1,6 @@
-﻿namespace JSON_Parser_Tool;
+﻿using System.Text;
+
+namespace JSON_Parser_Tool;
 public class JSON
 {
     public static object? Parse(string json)
@@ -34,8 +36,43 @@ public class JSON
                 continue;
             }
 
+            if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
+            {
+                var parsedNumber = ParseNumber(json, i);
+                result = parsedNumber.Result;
+                i += parsedNumber.Count;
+                continue;
+            }
+
             throw new Exception($"Unexpected character '{c}' at index {i}");
         }
         return result;
     }
+
+    private static JsonIntResult ParseNumber(string json, int position)
+    {
+        StringBuilder result = new StringBuilder();
+
+        for (int i = position; i < json.Length; i++)
+        {
+            var c = json[i];
+            if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
+            {
+                result.Append(c);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        var isParsed = int.TryParse(result.ToString(), out var number);
+        if (!isParsed)
+        {
+            throw new Exception($"Unable to parse number at position {position}");
+        }
+        return new JsonIntResult(result.Length, number);
+    }
 }
+
+public record JsonIntResult(int Count, int Result);

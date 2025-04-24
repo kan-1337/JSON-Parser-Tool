@@ -1,0 +1,38 @@
+﻿using JSON_Parser_Tool;
+
+namespace JSONParser.Test
+{
+    public class JSONParserTests
+    {
+        [Fact]
+        public void ParseJson_Null_NullResult()
+        {
+            var result = JSON.Parse("null");
+            Assert.Null(result);
+        }
+
+        [Theory]
+        [InlineData("true", true)]
+        [InlineData("false", false)]
+        public void ParseJson_Boolean_TrueAndFalseResult(string json, bool expected)
+        {
+            var result = JSON.Parse(json);
+            var value = Assert.IsType<bool>(result);
+            Assert.Equal(expected, value);
+        }
+
+        [Theory]
+        [InlineData("0", 0)]
+        [InlineData("1", 1)]
+        [InlineData("10", 10)]
+        [InlineData("42", 42)]
+        [InlineData("69", 69)]
+        [InlineData("420", 420)]
+        public void ParseJson_Number_NumberResult(string json, int expected)
+        {
+            var result = JSON.Parse(json);
+            var value = Assert.IsType<int>(result);
+            Assert.Equal(expected, value);
+        }
+    }
+}
