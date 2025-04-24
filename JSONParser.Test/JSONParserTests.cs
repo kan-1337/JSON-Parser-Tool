@@ -69,5 +69,18 @@ namespace JSONParser.Test
             Assert.Equal(69, b2);
             Assert.Equal(420, b3);
         }
+
+        [Fact]
+        public void ParseJson_ArrayStringTypes_StringTypesResult()
+        {
+            var result = JSON.Parse("[ \"one\", \"two\", \"\\\"three\\\"\"]");
+            var value = Assert.IsType<object[]>(result);
+            var b1 = Assert.IsType<string>(value[0]);
+            var b2 = Assert.IsType<string>(value[1]);
+            var b3 = Assert.IsType<string>(value[2]);
+            Assert.Equal("one", b1);
+            Assert.Equal("two", b2);
+            Assert.Equal("\"three\"", b3);
+        }
     }
 }
