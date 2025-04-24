@@ -11,11 +11,14 @@ namespace JSONParser.Test
             Assert.Null(result);
         }
 
-        [Fact]
-        public void ParseJson_Boolean_TrueResult()
+        [Theory]
+        [InlineData("true", true)]
+        [InlineData("false", false)]
+        public void ParseJson_Boolean_TrueResult(string json, bool expected)
         {
-            var result = JSON.Parse("null");
-            Assert.Null(result);
+            var result = JSON.Parse(json);
+            var value = Assert.IsType<bool>(result);
+            Assert.Equal(expected, value);
         }
     }
 }
