@@ -56,5 +56,18 @@ namespace JSONParser.Test
             Assert.True(b1);
             Assert.False(b2);
         }
+
+        [Fact]
+        public void ParseJson_ArrayNumberTypes_NumberTypesResult()
+        {
+            var result = JSON.Parse("[1, 69, 420]");
+            var value = Assert.IsType<object[]>(result);
+            var b1 = Assert.IsType<int>(value[0]);
+            var b2 = Assert.IsType<int>(value[1]);
+            var b3 = Assert.IsType<int>(value[2]);
+            Assert.Equal(1, b1);
+            Assert.Equal(69, b2);
+            Assert.Equal(420, b3);
+        }
     }
 }

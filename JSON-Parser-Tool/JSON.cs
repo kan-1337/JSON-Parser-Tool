@@ -15,26 +15,6 @@ public class JSON
         while (i < json.Length)
         {
             var c = json[i];
-            if (c == 'n')
-            {
-                result = null;
-                i += 4;
-                break;
-            }
-
-            if (c == 't')
-            {
-                result = true;
-                i += 4;
-                break;
-            }
-
-            if (c == 'f')
-            {
-                result = false;
-                i += 5;
-                break;
-            }
 
             if (c == ' ')
             {
@@ -42,20 +22,31 @@ public class JSON
                 break;
             }
 
+            if (c == 'n')
+            {
+                return new ParsedValue(4, null);
+            }
+
+            if (c == 't')
+            {
+                return new ParsedValue(4, true);
+            }
+
+            if (c == 'f')
+            {
+                return new ParsedValue(5, false);
+            }
+
             if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
             {
                 var parsedNumber = ParseNumber(json, i);
-                result = parsedNumber.Result;
-                i += parsedNumber.Count;
-                break;
+                return new ParsedValue(parsedNumber.Count, parsedNumber.Result);
             }
 
             if (c == '"')
             {
-                var stringResult = ParseString(json, i);
-                result = stringResult.Result;
-                i += stringResult.Count;
-                break;
+                var parsedString = ParseString(json, i);
+                return new ParsedValue(parsedString.Count, parsedString.Result);
             }
 
             throw new Exception($"Unexpected character '{c}' at index {i}");
@@ -164,12 +155,12 @@ public class JSON
             if (c == '[')
             {
                 var result = ParseArray(json, i);
-                return new JsonInternalResult(result.Count + i, result.Result);
+                return new JsonInternalResult(result.Count, result.Result);
             }
             else
             {
                 var parsedValue = ParseValue(json, i);
-                return new JsonInternalResult(parsedValue.Count + i, parsedValue.Result);
+                return new JsonInternalResult(parsedValue.Count, parsedValue.Result);
             }
         }
         throw new Exception($"Invalid JSON \n {json}");
