@@ -5,35 +5,41 @@ public class JSON
 {
     public static object? Parse(string json)
     {
+        return InternalParse(json, 0).Result;
+    }
+
+    public static ParsedValue ParseValue(string json, int position)
+    {
         object result = null;
-        for (int i = 0; i < json.Length;)
+        var i = position;
+        while (i < json.Length)
         {
             var c = json[i];
             if (c == 'n')
             {
                 result = null;
                 i += 4;
-                continue;
+                break;
             }
 
             if (c == 't')
             {
                 result = true;
                 i += 4;
-                continue;
+                break;
             }
 
             if (c == 'f')
             {
                 result = false;
                 i += 5;
-                continue;
+                break;
             }
 
             if (c == ' ')
             {
                 i++;
-                continue;
+                break;
             }
 
             if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
@@ -41,7 +47,7 @@ public class JSON
                 var parsedNumber = ParseNumber(json, i);
                 result = parsedNumber.Result;
                 i += parsedNumber.Count;
-                continue;
+                break;
             }
 
             if (c == '"')
@@ -49,12 +55,18 @@ public class JSON
                 var stringResult = ParseString(json, i);
                 result = stringResult.Result;
                 i += stringResult.Count;
-                continue;
+                break;
             }
 
             throw new Exception($"Unexpected character '{c}' at index {i}");
         }
-        return result;
+
+        if (result is null)
+        {
+            return new ParsedValue(i, null);
+        }
+
+        return new ParsedValue(i - position, result);
     }
 
     private static JsonIntResult ParseNumber(string json, int position)
@@ -82,6 +94,34 @@ public class JSON
         return new JsonIntResult(result.Length, number);
     }
 
+    private static JsonArrayResult ParseArray(string json, int position)
+    {
+        List<object?> result = new List<object?>();
+        var i = position + 1; // Skip the opening bracket
+        while (i < json.Length)
+        {
+            var c = json[i];
+
+            if (c is ' ' or ',')
+            {
+                i++;
+                continue;
+            }
+
+            if (c == ']') // Closing bracket indicates end of array
+            {
+                i++;
+                break;
+            }
+
+            var internalParse = InternalParse(json, i);
+            result.Add(internalParse.Result);
+            i += internalParse.Count;
+        }
+
+        return new JsonArrayResult(i - position, result.ToArray());
+    }
+
     private static JsonStringResult ParseString(string json, int position)
     {
         StringBuilder result = new StringBuilder();
@@ -107,7 +147,38 @@ public class JSON
         }
         return new JsonStringResult(i - position, result.ToString());
     }
+
+    private static JsonInternalResult InternalParse(string json, int position)
+    {
+        var i = position;
+        while (i < json.Length)
+        {
+            var c = json[i];
+
+            if (c == ' ')
+            {
+                i++;
+                continue;
+            }
+
+            if (c == '[')
+            {
+                var result = ParseArray(json, i);
+                return new JsonInternalResult(result.Count + i, result.Result);
+            }
+            else
+            {
+                var parsedValue = ParseValue(json, i);
+                return new JsonInternalResult(parsedValue.Count + i, parsedValue.Result);
+            }
+        }
+        throw new Exception($"Invalid JSON \n {json}");
+    }
 }
 
 public record JsonIntResult(int Count, int Result);
+public record JsonInternalResult(int Count, object? Result);
+public record JsonArrayResult(int Count, object[] Result);
 public record JsonStringResult(int Count, string Result);
+
+public record struct ParsedValue(int Count, object? Result);

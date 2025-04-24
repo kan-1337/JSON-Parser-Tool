@@ -45,5 +45,16 @@ namespace JSONParser.Test
             var value = Assert.IsType<string>(result);
             Assert.Equal(expected, value);
         }
+
+        [Fact]
+        public void ParseJson_ArrayBoolTypes_BoolTypesResult()
+        {
+            var result = JSON.Parse("[true, false]");
+            var value = Assert.IsType<object[]>(result);
+            var b1 = Assert.IsType<bool>(value[0]);
+            var b2 = Assert.IsType<bool>(value[1]);
+            Assert.True(b1);
+            Assert.False(b2);
+        }
     }
 }
