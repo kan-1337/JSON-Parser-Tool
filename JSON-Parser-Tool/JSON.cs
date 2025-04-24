@@ -44,6 +44,14 @@ public class JSON
                 continue;
             }
 
+            if (c == '"')
+            {
+                var stringResult = ParseString(json, i);
+                result = stringResult.Result;
+                i += stringResult.Count;
+                continue;
+            }
+
             throw new Exception($"Unexpected character '{c}' at index {i}");
         }
         return result;
@@ -73,6 +81,33 @@ public class JSON
         }
         return new JsonIntResult(result.Length, number);
     }
+
+    private static JsonStringResult ParseString(string json, int position)
+    {
+        StringBuilder result = new StringBuilder();
+        var i = position + 1; // Skip the opening quote
+        while (i < json.Length)
+        {
+            var c = json[i];
+            if (c == '"')
+            {
+                i++;
+                break;
+            }
+            if(c is '\\')
+            {
+                i++;
+                result.Append(json[i]);
+            }
+            else
+            {
+                result.Append(c);
+            }
+            i++;
+        }
+        return new JsonStringResult(i - position, result.ToString());
+    }
 }
 
 public record JsonIntResult(int Count, int Result);
+public record JsonStringResult(int Count, string Result);

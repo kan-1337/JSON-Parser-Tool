@@ -28,10 +28,21 @@ namespace JSONParser.Test
         [InlineData("42", 42)]
         [InlineData("69", 69)]
         [InlineData("420", 420)]
-        public void ParseJson_Number_NumberResult(string json, int expected)
+        public void ParseJson_IntNumber_IntNumberResult(string json, int expected)
         {
             var result = JSON.Parse(json);
             var value = Assert.IsType<int>(result);
+            Assert.Equal(expected, value);
+        }
+
+        [Theory]
+        [InlineData("\"one\"", "one")]
+        [InlineData(" \" two \"", " two ")]
+        [InlineData(" \" \\\" three \\\" \"", " \" three \" ")]
+        public void ParseJson_StringNumber_StringNumberResult(string json, string expected)
+        {
+            var result = JSON.Parse(json);
+            var value = Assert.IsType<string>(result);
             Assert.Equal(expected, value);
         }
     }
