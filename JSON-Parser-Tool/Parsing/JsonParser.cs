@@ -121,7 +121,7 @@ namespace JSON_Parser_Tool
                 throw new JsonParseException($"Expected '\"' at position {position} but found '{json[position]}'");
 
             StringBuilder result = new StringBuilder();
-            int i = position + 1; // Skip the opening quote
+            int i = position + 1;
 
             while (i < json.Length)
             {
@@ -129,7 +129,7 @@ namespace JSON_Parser_Tool
 
                 if (c == '"')
                 {
-                    i++; // Move past the closing quote
+                    i++;
                     break;
                 }
 
