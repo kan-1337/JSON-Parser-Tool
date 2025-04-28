@@ -85,9 +85,87 @@ public class JSON
         return new JsonIntResult(result.Length, number);
     }
 
+    private static JsonInternalResult InternalParse(string json, int position)
+    {
+        var i = position;
+        while (i < json.Length)
+        {
+            var c = json[i];
+
+            if (c == ' ')
+            {
+                i++;
+                continue;
+            }
+            if (c == '{')
+            {
+                var parsedObject = ParseObject(json, i);
+                return new JsonInternalResult(parsedObject.Count, parsedObject.Value);
+            }
+            if (c == '[')
+            {
+                var result = ParseArray(json, i);
+                return new JsonInternalResult(result.Count, result.Result);
+            }
+            else
+            {
+                var parsedValue = ParseValue(json, i);
+                return new JsonInternalResult(parsedValue.Count, parsedValue.Result);
+            }
+        }
+        throw new Exception($"Invalid JSON \n {json}");
+    }
+
+    private static JsonAObjectResult ParseObject(string json, int position)
+    {
+        Dictionary<string, object?> result = new();
+        var i = position + 1; // Skip the opening bracket
+        while (i < json.Length)
+        {
+            var c = json[i];
+            if (c is ' ' or ',' or '\n')
+            {
+                i++;
+                continue;
+            }
+            if (c == '}') // Closing bracket indicates end of object
+            {
+                i++;
+                break;
+            }
+            if (c is '"')
+            {
+                var parsedObjectProperty = ParseObjectProperty(json, i);
+                i += parsedObjectProperty.Count;
+                result[parsedObjectProperty.Key] = parsedObjectProperty.Value;
+            }
+        }
+        return new JsonAObjectResult(i - position, result);
+    }
+
+    private static JsonAObjectResultProperty ParseObjectProperty(string json, int position)
+    {
+        var i = position + 1; // Skip the opening bracket
+        var parsedString = ParseString(json, i);
+        i += parsedString.Count;
+
+        while (json[i] != ':')
+        {
+            i++;
+        }
+
+        i++;
+        var parsedObject = ParseObject(json, i);
+        i += parsedObject.Count;
+        return new JsonAObjectResultProperty(
+                            i - position, 
+                            parsedString.Result, 
+                            parsedObject.Value);
+    }
+
     private static JsonArrayResult ParseArray(string json, int position)
     {
-        List<object?> result = new List<object?>();
+        List<object?> result = new();
         var i = position + 1; // Skip the opening bracket
         while (i < json.Length)
         {
@@ -125,7 +203,7 @@ public class JSON
                 i++;
                 break;
             }
-            if(c is '\\')
+            if (c is '\\')
             {
                 i++;
                 result.Append(json[i]);
@@ -138,38 +216,13 @@ public class JSON
         }
         return new JsonStringResult(i - position, result.ToString());
     }
-
-    private static JsonInternalResult InternalParse(string json, int position)
-    {
-        var i = position;
-        while (i < json.Length)
-        {
-            var c = json[i];
-
-            if (c == ' ')
-            {
-                i++;
-                continue;
-            }
-
-            if (c == '[')
-            {
-                var result = ParseArray(json, i);
-                return new JsonInternalResult(result.Count, result.Result);
-            }
-            else
-            {
-                var parsedValue = ParseValue(json, i);
-                return new JsonInternalResult(parsedValue.Count, parsedValue.Result);
-            }
-        }
-        throw new Exception($"Invalid JSON \n {json}");
-    }
 }
 
 public record JsonIntResult(int Count, int Result);
 public record JsonInternalResult(int Count, object? Result);
 public record JsonArrayResult(int Count, object[] Result);
+public record JsonAObjectResult(int Count, object Value);
+public record JsonAObjectResultProperty(int Count, string Key, object Value);
 public record JsonStringResult(int Count, string Result);
 
 public record struct ParsedValue(int Count, object? Result);

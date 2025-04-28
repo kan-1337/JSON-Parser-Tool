@@ -110,5 +110,13 @@ namespace JSONParser.Test
             Assert.False(Assert.IsType<bool>(value[1]));
             Assert.Equal("one", Assert.IsType<string>(value[2]));
         }
+
+        [Fact]
+        public void ParseJson_WitEmptyhObject_EmptyResult()
+        {
+            var result = JSON.Parse("{}");
+            var value = Assert.IsType<Dictionary<string, object>>(result);
+            Assert.Empty(value);
+        }
     }
 }
