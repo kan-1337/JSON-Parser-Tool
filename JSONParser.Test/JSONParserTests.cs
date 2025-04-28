@@ -180,5 +180,79 @@ namespace JSONParser.Test
             Assert.Equal(69, firstItem["key5"]);
             Assert.Equal("Elon", firstItem["key6"]);
         }
+
+        [Fact]
+        public void ParseJson_WithIntegerValue_ReturnsCorrectInt()
+        {
+            var json = "42";
+            var result = JsonParser.Parse(json);
+            var value = Assert.IsType<int>(result);
+            Assert.Equal(42, value);
+        }
+
+        [Fact]
+        public void ParseJson_WithFloatValue_ReturnsCorrectDouble()
+        {
+            var json = "3.1415";
+            var result = JsonParser.Parse(json);
+            var value = Assert.IsType<double>(result);
+            Assert.Equal(3.1415, value, 5); // 5 digits precision
+        }
+
+        [Fact]
+        public void ParseJson_WithNegativeFloat_ReturnsCorrectDouble()
+        {
+            var json = "-0.99";
+            var result = JsonParser.Parse(json);
+            var value = Assert.IsType<double>(result);
+            Assert.Equal(-0.99, value, 5);
+        }
+
+        [Fact]
+        public void ParseJson_WithEscapedCharactersInString_ReturnsCorrectString()
+        {
+            var json = "\"Hello\\nWorld\\tTab\\\"Quote\\\"\"";
+            var result = JsonParser.Parse(json);
+            var value = Assert.IsType<string>(result);
+            Assert.Equal("Hello\nWorld\tTab\"Quote\"", value);
+        }
+
+        [Fact]
+        public void ParseJson_WithArrayContainingFloatsAndInts_ReturnsCorrectArray()
+        {
+            var json = "[1, 2.5, 3, 4.75]";
+            var result = JsonParser.Parse(json);
+            var array = Assert.IsType<object[]>(result);
+
+            Assert.Equal(4, array.Length);
+            Assert.Equal(1, array[0]);
+            Assert.Equal(2.5, (double)array[1], 5);
+            Assert.Equal(3, array[2]);
+            Assert.Equal(4.75, (double)array[3], 5);
+        }
+
+        [Fact]
+        public void ParseJson_WithNestedObjectWithFloatAndEscapedString_ReturnsCorrectStructure()
+        {
+            var json = """
+            {
+                "number": 123.456,
+                "message": "Line1\nLine2",
+                "valid": true
+            }
+            """;
+
+
+            var result = JsonParser.Parse(json);
+            var dict = Assert.IsType<Dictionary<string, object>>(result);
+
+            Assert.True(dict.ContainsKey("number"));
+            Assert.True(dict.ContainsKey("message"));
+            Assert.True(dict.ContainsKey("valid"));
+
+            Assert.Equal(123.456, (double)dict["number"], 5);
+            Assert.Equal("Line1\nLine2", dict["message"]);
+            Assert.Equal(true, dict["valid"]);
+        }
     }
 }

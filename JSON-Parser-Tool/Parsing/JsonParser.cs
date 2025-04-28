@@ -1,5 +1,6 @@
 ﻿using JSON_Parser_Tool.Exceptions;
 using JSON_Parser_Tool.Models;
+using System.Globalization;
 using System.Text;
 
 namespace JSON_Parser_Tool
@@ -57,7 +58,10 @@ namespace JSON_Parser_Tool
                 return ParseNumber(json, i, originalPosition);
 
             if (c == '"')
-                return ParseString(json, i, originalPosition);
+            {
+                var parsedString = ParseString(json, i, originalPosition);
+                return new JsonInternalResult(parsedString.Count, parsedString.Result);
+            }
 
             throw new JsonParseException($"Unexpected character '{c}' at position {i}.");
         }
@@ -73,44 +77,91 @@ namespace JSON_Parser_Tool
                 i++;
             }
 
-            while (i < json.Length && char.IsDigit(json[i]))
-            {
-                sb.Append(json[i]);
-                i++;
-            }
-
-            if (!int.TryParse(sb.ToString(), out var number))
-                throw new JsonParseException($"Invalid number format starting at {start}.");
-
-            return new JsonInternalResult(i - originalPosition, number);
-        }
-
-        private static JsonInternalResult ParseString(string json, int i, int originalPosition)
-        {
-            i++; // Skip the opening quote
-            var sb = new StringBuilder();
+            bool hasDecimal = false;
 
             while (i < json.Length)
             {
-                if (json[i] == '"')
+                if (char.IsDigit(json[i]))
                 {
-                    i++; // skip closing quote
-                    break;
+                    sb.Append(json[i]);
                 }
-                if (json[i] == '\\')
+                else if (json[i] == '.' && !hasDecimal)
                 {
-                    i++;
-                    if (i < json.Length)
-                        sb.Append(json[i]);
+                    hasDecimal = true;
+                    sb.Append(json[i]);
                 }
                 else
                 {
-                    sb.Append(json[i]);
+                    break;
                 }
                 i++;
             }
 
-            return new JsonInternalResult(i - originalPosition, sb.ToString());
+            var numberStr = sb.ToString();
+
+            if (hasDecimal)
+            {
+                if (double.TryParse(numberStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var floatResult))
+                    return new JsonInternalResult(i - originalPosition, floatResult);
+
+                throw new JsonParseException($"Invalid float format at {start}");
+            }
+            else
+            {
+                if (int.TryParse(numberStr, out var intResult))
+                    return new JsonInternalResult(i - originalPosition, intResult);
+
+                throw new JsonParseException($"Invalid integer format at {start}");
+            }
+        }
+
+        private static JsonStringResult ParseString(string json, int position, int basePosition)
+        {
+            if (json[position] != '"')
+                throw new JsonParseException($"Expected '\"' at position {position} but found '{json[position]}'");
+
+            StringBuilder result = new StringBuilder();
+            int i = position + 1; // Skip the opening quote
+
+            while (i < json.Length)
+            {
+                char c = json[i];
+
+                if (c == '"')
+                {
+                    i++; // Move past the closing quote
+                    break;
+                }
+
+                if (c == '\\')
+                {
+                    i++;
+                    if (i >= json.Length)
+                        throw new JsonParseException("Unexpected end of input after escape character.");
+
+                    char next = json[i];
+                    switch (next)
+                    {
+                        case '\\': result.Append('\\'); break;
+                        case '"': result.Append('"'); break;
+                        case 'n': result.Append('\n'); break;
+                        case 't': result.Append('\t'); break;
+                        case 'r': result.Append('\r'); break;
+                        case 'b': result.Append('\b'); break;
+                        case 'f': result.Append('\f'); break;
+                        default:
+                            throw new JsonParseException($"Unsupported escape sequence: \\{next}");
+                    }
+                }
+                else
+                {
+                    result.Append(c);
+                }
+
+                i++;
+            }
+
+            return new JsonStringResult(i - basePosition, result.ToString());
         }
 
         private static JsonInternalResult ParseArray(string json, int i, int originalPosition)
