@@ -118,5 +118,66 @@ namespace JSONParser.Test
             var value = Assert.IsType<Dictionary<string, object>>(result);
             Assert.Empty(value);
         }
+
+        [Fact]
+        public void ParseJson_WithFlatObject_ReturnsCorrectDictionary()
+        {
+            var json = """
+                {
+                    "key1": null,
+                    "key2": true,
+                    "key3": 420,
+                    "key4": "Trump"
+                }
+                """;
+            var result = JSON.Parse(json);
+            var value = Assert.IsType<Dictionary<string, object>>(result);
+            Assert.NotEmpty(value);
+            Assert.Null(value["key1"]);
+            Assert.True(Assert.IsType<bool>(value["key2"]));
+            Assert.Equal(420, value["key3"]);
+            Assert.Equal("Trump", value["key4"]);
+        }
+
+        [Fact]
+        public void ParseJson_WithNestedObjectsAndArrays_ReturnsCorrectNestedStructure()
+        {
+            var json = """
+                {
+                    "key1": null,
+                    "key2": {
+                        "key3": [
+                        {
+                            "key4": "Falafel",
+                            "key5": 69,
+                            "key6": "Elon"
+                        }],
+                        "key7": true,
+                        "key8": 420,
+                        "key9": "Trump"
+                    },
+                }
+                """;
+            var result = JSON.Parse(json);
+
+            var root = Assert.IsType<Dictionary<string, object>>(result);
+
+            Assert.NotEmpty(root);
+            Assert.Null(root["key1"]);
+
+            var key2 = Assert.IsType<Dictionary<string, object>>(root["key2"]);
+
+            Assert.True((bool)key2["key7"]);
+            Assert.Equal(420, (int)key2["key8"]);
+            Assert.Equal("Trump", (string)key2["key9"]);
+
+            var key3 = Assert.IsType<object[]>(key2["key3"]);
+            Assert.Single(key3);
+
+            var firstItem = Assert.IsType<Dictionary<string, object>>(key3[0]);
+            Assert.Equal("Falafel", firstItem["key4"]);
+            Assert.Equal(69, firstItem["key5"]);
+            Assert.Equal("Elon", firstItem["key6"]);
+        }
     }
 }

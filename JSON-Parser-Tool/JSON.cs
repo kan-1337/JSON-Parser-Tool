@@ -24,32 +24,36 @@ public class JSON
 
             if (c == 'n')
             {
-                return new ParsedValue(4, null);
+                return new ParsedValue(i - position + 4, null);
             }
 
             if (c == 't')
             {
-                return new ParsedValue(4, true);
+                return new ParsedValue(i - position + 4, true);
             }
 
             if (c == 'f')
             {
-                return new ParsedValue(5, false);
+                return new ParsedValue(i - position + 5, false);
             }
 
             if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
             {
                 var parsedNumber = ParseNumber(json, i);
-                return new ParsedValue(parsedNumber.Count, parsedNumber.Result);
+                return new ParsedValue(
+                            i - position + parsedNumber.Count,
+                            parsedNumber.Result);
             }
 
             if (c == '"')
             {
                 var parsedString = ParseString(json, i);
-                return new ParsedValue(parsedString.Count, parsedString.Result);
+                return new ParsedValue(
+                            i - position + parsedString.Count,
+                            parsedString.Result);
             }
 
-            throw new Exception($"Unexpected character '{c}' at index {i}");
+            throw new Exception($"Unexpected character '{c}' at index {i}, {json.Substring(0, i + 1)}");
         }
 
         if (result is null)
@@ -100,18 +104,21 @@ public class JSON
             if (c == '{')
             {
                 var parsedObject = ParseObject(json, i);
-                return new JsonInternalResult(parsedObject.Count, parsedObject.Value);
+                return new JsonInternalResult(
+                                    i - position + parsedObject.Count, 
+                                    parsedObject.Value);
             }
             if (c == '[')
             {
                 var result = ParseArray(json, i);
-                return new JsonInternalResult(result.Count, result.Result);
+                return new JsonInternalResult(
+                                    i - position + result.Count, 
+                                    result.Result);
             }
-            else
-            {
-                var parsedValue = ParseValue(json, i);
-                return new JsonInternalResult(parsedValue.Count, parsedValue.Result);
-            }
+            var parsedValue = ParseValue(json, i);
+            return new JsonInternalResult(
+                                i - position + parsedValue.Count, 
+                                parsedValue.Result);
         }
         throw new Exception($"Invalid JSON \n {json}");
     }
@@ -123,7 +130,7 @@ public class JSON
         while (i < json.Length)
         {
             var c = json[i];
-            if (c is ' ' or ',' or '\n')
+            if (c is ' ' or ',' or '\n' or '\r')
             {
                 i++;
                 continue;
@@ -138,14 +145,16 @@ public class JSON
                 var parsedObjectProperty = ParseObjectProperty(json, i);
                 i += parsedObjectProperty.Count;
                 result[parsedObjectProperty.Key] = parsedObjectProperty.Value;
+                continue;
             }
+            throw new Exception($"Unexpected character '{c}' at index {i} in object");
         }
         return new JsonAObjectResult(i - position, result);
     }
 
     private static JsonAObjectResultProperty ParseObjectProperty(string json, int position)
     {
-        var i = position + 1; // Skip the opening bracket
+        var i = position; // Skip the opening bracket
         var parsedString = ParseString(json, i);
         i += parsedString.Count;
 
@@ -155,12 +164,12 @@ public class JSON
         }
 
         i++;
-        var parsedObject = ParseObject(json, i);
+        var parsedObject = InternalParse(json, i);
         i += parsedObject.Count;
         return new JsonAObjectResultProperty(
                             i - position, 
                             parsedString.Result, 
-                            parsedObject.Value);
+                            parsedObject.Result);
     }
 
     private static JsonArrayResult ParseArray(string json, int position)
@@ -171,7 +180,7 @@ public class JSON
         {
             var c = json[i];
 
-            if (c is ' ' or ',')
+            if (c is ' ' or ',' or '\n' or '\r')
             {
                 i++;
                 continue;
@@ -222,7 +231,7 @@ public record JsonIntResult(int Count, int Result);
 public record JsonInternalResult(int Count, object? Result);
 public record JsonArrayResult(int Count, object[] Result);
 public record JsonAObjectResult(int Count, object Value);
-public record JsonAObjectResultProperty(int Count, string Key, object Value);
+public record JsonAObjectResultProperty(int Count, string Key, object? Value);
 public record JsonStringResult(int Count, string Result);
 
 public record struct ParsedValue(int Count, object? Result);
