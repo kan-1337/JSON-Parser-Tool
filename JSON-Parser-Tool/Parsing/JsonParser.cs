@@ -1,6 +1,7 @@
-﻿using System.Text;
+﻿using JSON_Parser_Tool.Models;
+using System.Text;
 
-namespace JSON_Parser_Tool;
+namespace JSON_Parser_Tool.Parsing;
 public class JSON
 {
     public static object? Parse(string json)
@@ -226,12 +227,3 @@ public class JSON
         return new JsonStringResult(i - position, result.ToString());
     }
 }
-
-public record JsonIntResult(int Count, int Result);
-public record JsonInternalResult(int Count, object? Result);
-public record JsonArrayResult(int Count, object[] Result);
-public record JsonAObjectResult(int Count, object Value);
-public record JsonAObjectResultProperty(int Count, string Key, object? Value);
-public record JsonStringResult(int Count, string Result);
-
-public record struct ParsedValue(int Count, object? Result);
