@@ -1,229 +1,190 @@
-﻿using JSON_Parser_Tool.Models;
+﻿using JSON_Parser_Tool.Exceptions;
+using JSON_Parser_Tool.Models;
 using System.Text;
 
-namespace JSON_Parser_Tool.Parsing;
-public class JSON
+namespace JSON_Parser_Tool
 {
-    public static object? Parse(string json)
+    public class JsonParser
     {
-        return InternalParse(json, 0).Result;
-    }
-
-    public static ParsedValue ParseValue(string json, int position)
-    {
-        object result = null;
-        var i = position;
-        while (i < json.Length)
+        public static object? Parse(string json)
         {
-            var c = json[i];
+            if (string.IsNullOrWhiteSpace(json))
+                throw new JsonParseException("Input JSON cannot be null or empty.");
 
-            if (c == ' ')
+            var parsed = ParseElement(json, 0);
+            return parsed.Result;
+        }
+
+        private static JsonInternalResult ParseElement(string json, int position)
+        {
+            int i = position;
+
+            while (i < json.Length)
             {
-                i++;
-                break;
+                char c = json[i];
+
+                if (char.IsWhiteSpace(c))
+                {
+                    i++;
+                    continue;
+                }
+
+                return c switch
+                {
+                    '{' => ParseObject(json, i, position),
+                    '[' => ParseArray(json, i, position),
+                    _ => ParseSimpleValue(json, i, position)
+                };
             }
 
-            if (c == 'n')
-            {
-                return new ParsedValue(i - position + 4, null);
-            }
+            throw new JsonParseException($"Invalid JSON starting at position {position}.");
+        }
 
-            if (c == 't')
-            {
-                return new ParsedValue(i - position + 4, true);
-            }
+        private static JsonInternalResult ParseSimpleValue(string json, int i, int originalPosition)
+        {
+            char c = json[i];
 
-            if (c == 'f')
-            {
-                return new ParsedValue(i - position + 5, false);
-            }
+            if (c == 'n' && json.Substring(i, 4) == "null")
+                return new JsonInternalResult(4, null);
 
-            if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
-            {
-                var parsedNumber = ParseNumber(json, i);
-                return new ParsedValue(
-                            i - position + parsedNumber.Count,
-                            parsedNumber.Result);
-            }
+            if (c == 't' && json.Substring(i, 4) == "true")
+                return new JsonInternalResult(4, true);
+
+            if (c == 'f' && json.Substring(i, 5) == "false")
+                return new JsonInternalResult(5, false);
+
+            if (char.IsDigit(c) || c == '-')
+                return ParseNumber(json, i, originalPosition);
 
             if (c == '"')
-            {
-                var parsedString = ParseString(json, i);
-                return new ParsedValue(
-                            i - position + parsedString.Count,
-                            parsedString.Result);
-            }
+                return ParseString(json, i, originalPosition);
 
-            throw new Exception($"Unexpected character '{c}' at index {i}, {json.Substring(0, i + 1)}");
+            throw new JsonParseException($"Unexpected character '{c}' at position {i}.");
         }
 
-        if (result is null)
+        private static JsonInternalResult ParseNumber(string json, int i, int originalPosition)
         {
-            return new ParsedValue(i, null);
-        }
+            int start = i;
+            var sb = new StringBuilder();
 
-        return new ParsedValue(i - position, result);
-    }
-
-    private static JsonIntResult ParseNumber(string json, int position)
-    {
-        StringBuilder result = new StringBuilder();
-
-        for (int i = position; i < json.Length; i++)
-        {
-            var c = json[i];
-            if (c is '0' or '1' or '2' or '3' or '4' or '5' or '6' or '7' or '8' or '9')
+            if (json[i] == '-')
             {
-                result.Append(c);
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        var isParsed = int.TryParse(result.ToString(), out var number);
-        if (!isParsed)
-        {
-            throw new Exception($"Unable to parse number at position {position}");
-        }
-        return new JsonIntResult(result.Length, number);
-    }
-
-    private static JsonInternalResult InternalParse(string json, int position)
-    {
-        var i = position;
-        while (i < json.Length)
-        {
-            var c = json[i];
-
-            if (c == ' ')
-            {
+                sb.Append(json[i]);
                 i++;
-                continue;
             }
-            if (c == '{')
-            {
-                var parsedObject = ParseObject(json, i);
-                return new JsonInternalResult(
-                                    i - position + parsedObject.Count, 
-                                    parsedObject.Value);
-            }
-            if (c == '[')
-            {
-                var result = ParseArray(json, i);
-                return new JsonInternalResult(
-                                    i - position + result.Count, 
-                                    result.Result);
-            }
-            var parsedValue = ParseValue(json, i);
-            return new JsonInternalResult(
-                                i - position + parsedValue.Count, 
-                                parsedValue.Result);
-        }
-        throw new Exception($"Invalid JSON \n {json}");
-    }
 
-    private static JsonAObjectResult ParseObject(string json, int position)
-    {
-        Dictionary<string, object?> result = new();
-        var i = position + 1; // Skip the opening bracket
-        while (i < json.Length)
+            while (i < json.Length && char.IsDigit(json[i]))
+            {
+                sb.Append(json[i]);
+                i++;
+            }
+
+            if (!int.TryParse(sb.ToString(), out var number))
+                throw new JsonParseException($"Invalid number format starting at {start}.");
+
+            return new JsonInternalResult(i - originalPosition, number);
+        }
+
+        private static JsonInternalResult ParseString(string json, int i, int originalPosition)
         {
-            var c = json[i];
-            if (c is ' ' or ',' or '\n' or '\r')
+            i++; // Skip the opening quote
+            var sb = new StringBuilder();
+
+            while (i < json.Length)
             {
+                if (json[i] == '"')
+                {
+                    i++; // skip closing quote
+                    break;
+                }
+                if (json[i] == '\\')
+                {
+                    i++;
+                    if (i < json.Length)
+                        sb.Append(json[i]);
+                }
+                else
+                {
+                    sb.Append(json[i]);
+                }
                 i++;
-                continue;
             }
-            if (c == '}') // Closing bracket indicates end of object
-            {
-                i++;
-                break;
-            }
-            if (c is '"')
-            {
-                var parsedObjectProperty = ParseObjectProperty(json, i);
-                i += parsedObjectProperty.Count;
-                result[parsedObjectProperty.Key] = parsedObjectProperty.Value;
-                continue;
-            }
-            throw new Exception($"Unexpected character '{c}' at index {i} in object");
+
+            return new JsonInternalResult(i - originalPosition, sb.ToString());
         }
-        return new JsonAObjectResult(i - position, result);
-    }
 
-    private static JsonAObjectResultProperty ParseObjectProperty(string json, int position)
-    {
-        var i = position; // Skip the opening bracket
-        var parsedString = ParseString(json, i);
-        i += parsedString.Count;
-
-        while (json[i] != ':')
+        private static JsonInternalResult ParseArray(string json, int i, int originalPosition)
         {
-            i++;
+            List<object?> list = new();
+            i++; // Skip '['
+
+            while (i < json.Length)
+            {
+                while (i < json.Length && (char.IsWhiteSpace(json[i]) || json[i] == ',' || json[i] == '\n' || json[i] == '\r'))
+                {
+                    i++;
+                }
+
+                if (i < json.Length && json[i] == ']')
+                {
+                    i++;
+                    break;
+                }
+
+                var element = ParseElement(json, i);
+                list.Add(element.Result);
+                i += element.Count;
+            }
+
+            return new JsonInternalResult(i - originalPosition, list.ToArray());
         }
 
-        i++;
-        var parsedObject = InternalParse(json, i);
-        i += parsedObject.Count;
-        return new JsonAObjectResultProperty(
-                            i - position, 
-                            parsedString.Result, 
-                            parsedObject.Result);
-    }
-
-    private static JsonArrayResult ParseArray(string json, int position)
-    {
-        List<object?> result = new();
-        var i = position + 1; // Skip the opening bracket
-        while (i < json.Length)
+        private static JsonInternalResult ParseObject(string json, int i, int originalPosition)
         {
-            var c = json[i];
+            Dictionary<string, object?> dict = new();
+            i++; // Skip '{'
 
-            if (c is ' ' or ',' or '\n' or '\r')
+            while (i < json.Length)
             {
-                i++;
-                continue;
+                while (i < json.Length && (char.IsWhiteSpace(json[i]) || json[i] == ',' || json[i] == '\n' || json[i] == '\r'))
+                {
+                    i++;
+                }
+
+                if (i < json.Length && json[i] == '}')
+                {
+                    i++;
+                    break;
+                }
+
+                if (json[i] != '"')
+                    throw new JsonParseException($"Expected '\"' at position {i} inside object.");
+
+                var keyParsed = ParseString(json, i, i);
+                var key = (string)keyParsed.Result!;
+                i += keyParsed.Count;
+
+                while (i < json.Length && json[i] != ':')
+                {
+                    i++;
+                }
+
+                if (i >= json.Length)
+                    throw new JsonParseException($"Unexpected end of object after key '{key}'.");
+
+                i++; // skip ':'
+
+                while (i < json.Length && char.IsWhiteSpace(json[i]))
+                {
+                    i++;
+                }
+
+                var valueParsed = ParseElement(json, i);
+                dict[key] = valueParsed.Result;
+                i += valueParsed.Count;
             }
 
-            if (c == ']') // Closing bracket indicates end of array
-            {
-                i++;
-                break;
-            }
-
-            var internalParse = InternalParse(json, i);
-            result.Add(internalParse.Result);
-            i += internalParse.Count;
+            return new JsonInternalResult(i - originalPosition, dict);
         }
-
-        return new JsonArrayResult(i - position, result.ToArray());
-    }
-
-    private static JsonStringResult ParseString(string json, int position)
-    {
-        StringBuilder result = new StringBuilder();
-        var i = position + 1; // Skip the opening quote
-        while (i < json.Length)
-        {
-            var c = json[i];
-            if (c == '"')
-            {
-                i++;
-                break;
-            }
-            if (c is '\\')
-            {
-                i++;
-                result.Append(json[i]);
-            }
-            else
-            {
-                result.Append(c);
-            }
-            i++;
-        }
-        return new JsonStringResult(i - position, result.ToString());
     }
 }

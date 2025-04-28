@@ -1,4 +1,5 @@
 ﻿using JSON_Parser_Tool;
+using JSON_Parser_Tool.Parsing;
 
 namespace JSONParser.Test
 {
@@ -7,7 +8,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WithNull_NullResult()
         {
-            var result = JSON.Parse("null");
+            var result = JsonParser.Parse("null");
             Assert.Null(result);
         }
 
@@ -16,7 +17,7 @@ namespace JSONParser.Test
         [InlineData("false", false)]
         public void ParseJson_WithBoolean_TrueAndFalseResult(string json, bool expected)
         {
-            var result = JSON.Parse(json);
+            var result = JsonParser.Parse(json);
             var value = Assert.IsType<bool>(result);
             Assert.Equal(expected, value);
         }
@@ -30,7 +31,7 @@ namespace JSONParser.Test
         [InlineData("420", 420)]
         public void ParseJson_WithIntNumber_IntNumberResult(string json, int expected)
         {
-            var result = JSON.Parse(json);
+            var result = JsonParser.Parse(json);
             var value = Assert.IsType<int>(result);
             Assert.Equal(expected, value);
         }
@@ -41,7 +42,7 @@ namespace JSONParser.Test
         [InlineData(" \" \\\" three \\\" \"", " \" three \" ")]
         public void ParseJson_WithStringNumber_StringNumberResult(string json, string expected)
         {
-            var result = JSON.Parse(json);
+            var result = JsonParser.Parse(json);
             var value = Assert.IsType<string>(result);
             Assert.Equal(expected, value);
         }
@@ -49,7 +50,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WithArrayBoolTypes_BoolTypesResult()
         {
-            var result = JSON.Parse("[true, false]");
+            var result = JsonParser.Parse("[true, false]");
             var value = Assert.IsType<object[]>(result);
             var b1 = Assert.IsType<bool>(value[0]);
             var b2 = Assert.IsType<bool>(value[1]);
@@ -60,7 +61,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WithArrayNumberTypes_NumberTypesResult()
         {
-            var result = JSON.Parse("[1, 69, 420]");
+            var result = JsonParser.Parse("[1, 69, 420]");
             var value = Assert.IsType<object[]>(result);
             var b1 = Assert.IsType<int>(value[0]);
             var b2 = Assert.IsType<int>(value[1]);
@@ -73,7 +74,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_ArrayStringTypes_StringTypesResult()
         {
-            var result = JSON.Parse("[ \"one\", \"two\", \"\\\"three\\\"\"]");
+            var result = JsonParser.Parse("[ \"one\", \"two\", \"\\\"three\\\"\"]");
             var value = Assert.IsType<object[]>(result);
             var b1 = Assert.IsType<string>(value[0]);
             var b2 = Assert.IsType<string>(value[1]);
@@ -86,7 +87,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WithArrayTypes_ArrayTypesResult()
         {
-            var result = JSON.Parse("[ null, 1 , false, \"one\"]");
+            var result = JsonParser.Parse("[ null, 1 , false, \"one\"]");
             var value = Assert.IsType<object[]>(result);
             var b1 = Assert.IsType<int>(value[1]);
             var b2 = Assert.IsType<bool>(value[2]);
@@ -100,7 +101,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WithNestedTypes_NestedResult()
         {
-            var result = JSON.Parse("[ null, [1, false, \"one\"]]");
+            var result = JsonParser.Parse("[ null, [1, false, \"one\"]]");
             var value = Assert.IsType<object[]>(result);
             Assert.Null(value[0]);
 
@@ -114,7 +115,7 @@ namespace JSONParser.Test
         [Fact]
         public void ParseJson_WitEmptyhObject_EmptyResult()
         {
-            var result = JSON.Parse("{}");
+            var result = JsonParser.Parse("{}");
             var value = Assert.IsType<Dictionary<string, object>>(result);
             Assert.Empty(value);
         }
@@ -130,7 +131,7 @@ namespace JSONParser.Test
                     "key4": "Trump"
                 }
                 """;
-            var result = JSON.Parse(json);
+            var result = JsonParser.Parse(json);
             var value = Assert.IsType<Dictionary<string, object>>(result);
             Assert.NotEmpty(value);
             Assert.Null(value["key1"]);
@@ -158,7 +159,7 @@ namespace JSONParser.Test
                     },
                 }
                 """;
-            var result = JSON.Parse(json);
+            var result = JsonParser.Parse(json);
 
             var root = Assert.IsType<Dictionary<string, object>>(result);
 
